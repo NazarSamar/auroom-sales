@@ -1,0 +1,543 @@
+<title>SalesFlow AI — Distribution Layer for Sales Teams</title>
+<style>
+  :root{
+    --ground:#0E1230;
+    --surface:#161B3D;
+    --surface-2:#1E2550;
+    --text:#EEF0FA;
+    --muted:#9298C4;
+    --line:#2C3470;
+    --accent:#FF5A3C;     /* broadcast coral */
+    --accent-2:#3DE0D0;   /* sync cyan */
+    --display: "Segoe UI", system-ui, -apple-system, sans-serif;
+    --body: "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "Consolas", "SF Mono", ui-monospace, monospace;
+  }
+
+  *{box-sizing:border-box;}
+
+  .deck{
+    position:fixed;
+    inset:0;
+    background:
+      radial-gradient(1200px 800px at 78% -10%, rgba(255,90,60,.10), transparent 55%),
+      radial-gradient(900px 700px at 5% 110%, rgba(61,224,208,.08), transparent 55%),
+      var(--ground);
+    color:var(--text);
+    font-family:var(--body);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---- progress + brand chrome ---- */
+  .progress{
+    position:absolute; top:0; left:0; height:3px;
+    background:linear-gradient(90deg, var(--accent), var(--accent-2));
+    width:0; transition:width .5s cubic-bezier(.2,.8,.2,1); z-index:40;
+    box-shadow:0 0 18px rgba(255,90,60,.5);
+  }
+  .brand{
+    position:absolute; top:26px; left:clamp(24px,5vw,72px); z-index:30;
+    display:flex; align-items:center; gap:11px;
+    font-family:var(--mono); letter-spacing:.16em; font-size:12px; color:var(--muted);
+    text-transform:uppercase;
+  }
+  .brand .mark{
+    width:13px; height:13px; border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 0 4px rgba(255,90,60,.18), 0 0 16px rgba(255,90,60,.7);
+  }
+  .brand b{color:var(--text); font-weight:700; letter-spacing:.16em;}
+
+  /* ---- slides ---- */
+  .slide{
+    position:absolute; inset:0; z-index:10;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:clamp(64px,9vh,120px) clamp(24px,7vw,120px) clamp(72px,9vh,110px);
+    opacity:0; transform:translateY(14px) scale(.992);
+    transition:opacity .55s ease, transform .55s cubic-bezier(.2,.8,.2,1);
+    pointer-events:none;
+  }
+  .slide.active{opacity:1; transform:none; pointer-events:auto;}
+
+  .index{
+    font-family:var(--mono); font-size:clamp(13px,1vw,15px); letter-spacing:.1em;
+    color:var(--accent); margin-bottom:18px;
+  }
+  .index .total{color:var(--muted);}
+  .eyebrow{
+    font-family:var(--mono); text-transform:uppercase; letter-spacing:.26em;
+    font-size:12px; color:var(--accent-2); margin-bottom:20px;
+  }
+  h1.title{
+    font-family:var(--display);
+    font-weight:800; line-height:1.02; letter-spacing:-.025em;
+    font-size:clamp(34px,5.6vw,76px); margin:0;
+    max-width:18ch;
+  }
+  h2.title{
+    font-family:var(--display);
+    font-weight:800; line-height:1.04; letter-spacing:-.02em;
+    font-size:clamp(28px,4.4vw,56px); margin:0 0 8px; max-width:20ch;
+  }
+  .lede{
+    font-size:clamp(16px,1.55vw,21px); color:var(--muted); line-height:1.5;
+    max-width:48ch; margin:18px 0 0;
+  }
+  .accent-text{color:var(--accent);}
+  .cyan-text{color:var(--accent-2);}
+
+  /* lists */
+  .stack{display:flex; flex-direction:column; gap:14px; margin:34px 0 0; max-width:62ch;}
+  .row{
+    display:flex; align-items:flex-start; gap:16px;
+    font-size:clamp(15px,1.5vw,20px); line-height:1.4;
+  }
+  .row .b{
+    flex:none; margin-top:.45em; width:8px; height:8px; border-radius:2px;
+    background:var(--accent-2); box-shadow:0 0 10px rgba(61,224,208,.6);
+  }
+
+  /* result chips */
+  .chips{display:flex; flex-wrap:wrap; gap:12px; margin-top:38px;}
+  .chip{
+    font-family:var(--mono); font-size:14px; letter-spacing:.02em;
+    padding:11px 16px; border-radius:11px;
+    background:rgba(255,90,60,.09); border:1px solid rgba(255,90,60,.28);
+    color:#FFB3A4;
+  }
+
+  /* platform tags */
+  .platforms{display:flex; flex-wrap:wrap; gap:12px; margin-top:26px;}
+  .ptag{
+    font-family:var(--mono); font-weight:600; letter-spacing:.04em; font-size:15px;
+    padding:12px 20px; border-radius:999px;
+    background:var(--surface); border:1px solid var(--line); color:var(--text);
+  }
+
+  /* two-col split */
+  .split{display:grid; grid-template-columns:1.05fr .95fr; gap:clamp(32px,5vw,80px); align-items:center;}
+  @media (max-width:880px){ .split{grid-template-columns:1fr; gap:36px;} }
+
+  /* hero network */
+  .hero-stage{position:relative; width:100%; height:min(56vh,460px);}
+  #net{position:absolute; inset:0; width:100%; height:100%;}
+
+  /* solution steps card */
+  .steps{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:42px;}
+  @media (max-width:880px){ .steps{grid-template-columns:1fr 1fr;} }
+  .step{
+    background:var(--surface); border:1px solid var(--line); border-radius:16px;
+    padding:22px 20px; position:relative; overflow:hidden;
+  }
+  .step .n{
+    font-family:var(--mono); font-size:13px; color:var(--accent); letter-spacing:.1em;
+  }
+  .step h3{margin:12px 0 10px; font-size:clamp(17px,1.6vw,21px); font-weight:700; letter-spacing:-.01em;}
+  .step p{margin:0; color:var(--muted); font-size:14.5px; line-height:1.5;}
+  .step::after{
+    content:""; position:absolute; right:-1px; top:18px; bottom:18px; width:1px;
+    background:linear-gradient(var(--accent),transparent);
+  }
+  .step:last-child::after{display:none;}
+  @media (max-width:880px){ .step::after{display:none;} }
+
+  /* dashboard mock */
+  .dash{
+    background:var(--surface); border:1px solid var(--line); border-radius:18px;
+    padding:20px; box-shadow:0 30px 80px rgba(0,0,0,.45);
+  }
+  .dash-bar{display:flex; gap:7px; margin-bottom:18px;}
+  .dash-bar i{width:11px; height:11px; border-radius:50%; background:var(--line);}
+  .dash-bar i:first-child{background:var(--accent);}
+  .dash-row{
+    display:grid; grid-template-columns:1.6fr 1fr 1fr; gap:12px; align-items:center;
+    padding:13px 14px; border-radius:11px; background:var(--ground); margin-bottom:9px;
+    font-size:14px;
+  }
+  .dash-row .obj{font-weight:600;}
+  .dash-row .chs{font-family:var(--mono); color:var(--muted); font-size:12.5px; letter-spacing:.03em;}
+  .badge{font-family:var(--mono); font-size:11.5px; padding:4px 9px; border-radius:6px; justify-self:start; letter-spacing:.04em;}
+  .badge.live{background:rgba(61,224,208,.14); color:var(--accent-2);}
+  .badge.sync{background:rgba(255,90,60,.14); color:#FFB3A4;}
+
+  /* metrics */
+  .metrics{display:grid; grid-template-columns:repeat(2,1fr); gap:clamp(20px,3vw,40px); margin-top:30px; max-width:900px;}
+  .metric{border-top:1px solid var(--line); padding-top:18px;}
+  .metric .big{
+    font-family:var(--display); font-weight:800; letter-spacing:-.03em;
+    font-size:clamp(46px,7vw,92px); line-height:.95;
+    background:linear-gradient(120deg,var(--accent),var(--accent-2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .metric .lbl{color:var(--muted); font-size:15px; margin-top:10px; max-width:24ch;}
+
+  /* big quote / vision */
+  .quote{
+    font-family:var(--display); font-weight:700; letter-spacing:-.02em;
+    font-size:clamp(24px,3.4vw,44px); line-height:1.18; max-width:24ch; margin:30px 0 0;
+  }
+  .quote .accent-text{font-style:normal;}
+  .pillrow{display:flex; flex-wrap:wrap; gap:10px 18px; margin-top:28px;}
+  .pill{
+    font-family:var(--mono); font-size:14px; color:var(--text); letter-spacing:.03em;
+    display:flex; align-items:center; gap:10px;
+  }
+  .pill::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--accent-2); box-shadow:0 0 10px var(--accent-2);}
+
+  .position-line{
+    font-family:var(--display); font-weight:800; letter-spacing:-.02em;
+    font-size:clamp(30px,4.6vw,62px); line-height:1.05; margin-top:10px;
+  }
+
+  /* nav */
+  .nav{
+    position:absolute; bottom:24px; right:clamp(24px,5vw,72px); z-index:30;
+    display:flex; align-items:center; gap:14px;
+  }
+  .nav button{
+    width:46px; height:46px; border-radius:50%; cursor:pointer;
+    background:var(--surface); border:1px solid var(--line); color:var(--text);
+    font-size:18px; display:grid; place-items:center;
+    transition:background .2s, border-color .2s, transform .1s;
+  }
+  .nav button:hover{background:var(--surface-2); border-color:var(--accent);}
+  .nav button:active{transform:scale(.93);}
+  .nav button:focus-visible{outline:2px solid var(--accent-2); outline-offset:3px;}
+  .counter{font-family:var(--mono); font-size:13px; color:var(--muted); letter-spacing:.1em; min-width:64px; text-align:right;}
+  .counter b{color:var(--text);}
+
+  .dots{
+    position:absolute; bottom:30px; left:clamp(24px,5vw,72px); z-index:30;
+    display:flex; gap:9px;
+  }
+  .dots i{
+    width:8px; height:8px; border-radius:50%; background:var(--line); cursor:pointer;
+    transition:background .25s, transform .25s, width .25s;
+  }
+  .dots i.on{background:var(--accent); width:22px; border-radius:5px;}
+
+  .hint{
+    position:absolute; bottom:30px; left:50%; transform:translateX(-50%); z-index:20;
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.18em; color:var(--muted);
+    text-transform:uppercase; pointer-events:none;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{transition:opacity .2s ease;}
+    .progress{transition:none;}
+  }
+  @media (max-width:600px){
+    .metrics{grid-template-columns:1fr;}
+    .dash-row{grid-template-columns:1fr; gap:6px; text-align:left;}
+  }
+
+  /* ---- print / PDF ---- */
+  @media print{
+    @page{ size:1280px 720px; margin:0; }
+    html,body{ margin:0 !important; padding:0 !important; }
+    *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    .deck{ position:static; overflow:visible; background:var(--ground); }
+    .progress,.brand,.nav,.dots,.hint{ display:none !important; }
+    .slide{
+      position:relative; inset:auto; width:1280px; height:720px;
+      opacity:1 !important; transform:none !important; pointer-events:auto;
+      page-break-after:always; break-after:page;
+      background:
+        radial-gradient(900px 600px at 78% -10%, rgba(255,90,60,.12), transparent 55%),
+        radial-gradient(700px 560px at 5% 110%, rgba(61,224,208,.09), transparent 55%),
+        var(--ground);
+    }
+    .slide:last-child{ page-break-after:avoid; break-after:auto; }
+  }
+</style>
+
+<div class="deck">
+  <div class="progress" id="progress"></div>
+  <div class="brand"><span class="mark"></span><b>SalesFlow&nbsp;AI</b> · Distribution Layer</div>
+
+  <!-- 01 HERO -->
+  <section class="slide active">
+    <div class="split">
+      <div>
+        <div class="eyebrow">AI · Listing Distribution</div>
+        <h1 class="title">Одне оголошення.<br><span class="accent-text">Всі платформи.</span><br>Максимальне покриття.</h1>
+        <p class="lede">SalesFlow AI перетворює один об'єкт на присутність усюди — автоматично, синхронно, під контролем відділу продажу.</p>
+      </div>
+      <div class="hero-stage"><canvas id="net"></canvas></div>
+    </div>
+  </section>
+
+  <!-- 02 PROBLEM -->
+  <section class="slide">
+    <div class="index">02 <span class="total">/ 11</span></div>
+    <div class="eyebrow">Проблема</div>
+    <h2 class="title">Відділ продажу працює неефективно</h2>
+    <p class="lede">Щодня менеджери роблять одне й те саме — руками.</p>
+    <div class="stack">
+      <div class="row"><span class="b"></span>Створюють те саме оголошення десятки разів</div>
+      <div class="row"><span class="b"></span>Публікують вручну на кожній платформі</div>
+      <div class="row"><span class="b"></span>Витрачають час на копіпаст і редагування</div>
+      <div class="row"><span class="b"></span>Не бачать, де оголошення реально працює</div>
+    </div>
+    <div class="chips">
+      <span class="chip">✕ повільний запуск</span>
+      <span class="chip">✕ нерівномірна присутність</span>
+      <span class="chip">✕ втрата лідів</span>
+      <span class="chip">✕ хаос у команді</span>
+    </div>
+  </section>
+
+  <!-- 03 KEY PROBLEM -->
+  <section class="slide">
+    <div class="index">03 <span class="total">/ 11</span></div>
+    <div class="eyebrow">Ключова проблема</div>
+    <h2 class="title">Один об'єкт = багато ручної роботи</h2>
+    <p class="lede">Квартира чи авто — і все доводиться публікувати окремо на кожному майданчику:</p>
+    <div class="platforms">
+      <span class="ptag">OLX</span>
+      <span class="ptag">DOM.RIA</span>
+      <span class="ptag">LUN</span>
+      <span class="ptag">realtor.ua</span>
+    </div>
+    <div class="stack">
+      <div class="row"><span class="b"></span>Різний формат і різні вимоги на кожному сайті</div>
+      <div class="row"><span class="b"></span>Різний опис, який треба переписувати щоразу</div>
+      <div class="row"><span class="b"></span>Ручне завантаження фото по колу</div>
+    </div>
+  </section>
+
+  <!-- 04 SOLUTION -->
+  <section class="slide">
+    <div class="index">04 <span class="total">/ 11</span></div>
+    <div class="eyebrow">Рішення</div>
+    <h2 class="title">Єдина система для всіх оголошень</h2>
+    <p class="lede">Менеджер робить роботу <span class="cyan-text">один раз</span> — далі працює система.</p>
+    <div class="stack">
+      <div class="row"><span class="b"></span>Створіть одне оголошення в системі</div>
+      <div class="row"><span class="b"></span>Додайте фото, опис і параметри — один раз</div>
+      <div class="row"><span class="b"></span>Натисніть <span class="accent-text">«Publish Everywhere»</span></div>
+    </div>
+    <div class="chips">
+      <span class="chip" style="background:rgba(61,224,208,.09); border-color:rgba(61,224,208,.28); color:#9CEFE5;">→ адаптує формат під платформу</span>
+      <span class="chip" style="background:rgba(61,224,208,.09); border-color:rgba(61,224,208,.28); color:#9CEFE5;">→ генерує правильні тексти</span>
+      <span class="chip" style="background:rgba(61,224,208,.09); border-color:rgba(61,224,208,.28); color:#9CEFE5;">→ публікує автоматично</span>
+      <span class="chip" style="background:rgba(61,224,208,.09); border-color:rgba(61,224,208,.28); color:#9CEFE5;">→ синхронізує статуси</span>
+    </div>
+  </section>
+
+  <!-- 05 DASHBOARD -->
+  <section class="slide">
+    <div class="split">
+      <div>
+        <div class="index">05 <span class="total">/ 11</span></div>
+        <div class="eyebrow">Панель управління</div>
+        <h2 class="title">Єдина панель для всього відділу</h2>
+        <p class="lede">Замість хаосу — <span class="cyan-text">системний контроль</span> у реальному часі.</p>
+        <div class="stack">
+          <div class="row"><span class="b"></span>Усі об'єкти: квартири, авто, товари</div>
+          <div class="row"><span class="b"></span>Статус публікації по кожному майданчику</div>
+          <div class="row"><span class="b"></span>Де розміщено й що працює краще</div>
+        </div>
+      </div>
+      <div class="dash">
+        <div class="dash-bar"><i></i><i></i><i></i></div>
+        <div class="dash-row"><span class="obj">ЖК Auroom City · 2к, 64м²</span><span class="chs">OLX · DOM.RIA · LUN</span><span class="badge live">● LIVE ×3</span></div>
+        <div class="dash-row"><span class="obj">ЖК Auroom Air · 1к, 48м²</span><span class="chs">OLX · DOM.RIA</span><span class="badge sync">↻ SYNC</span></div>
+        <div class="dash-row"><span class="obj">ЖК Auroom Urban · 3к, 82м²</span><span class="chs">DOM.RIA · LUN · realtor.ua</span><span class="badge live">● LIVE ×3</span></div>
+        <div class="dash-row"><span class="obj">ЖК Auroom Forest · 1к, 41м²</span><span class="chs">OLX · LUN</span><span class="badge live">● LIVE ×2</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 WORKFLOW -->
+  <section class="slide">
+    <div class="index">06 <span class="total">/ 11</span></div>
+    <div class="eyebrow">Workflow</div>
+    <h2 class="title">Як працює система</h2>
+    <div class="steps">
+      <div class="step"><div class="n">01 · СТВОРЕННЯ</div><h3>Менеджер додає</h3><p>Опис, фото, ціну та характеристики об'єкта.</p></div>
+      <div class="step"><div class="n">02 · AI-ОБРОБКА</div><h3>Система адаптує</h3><p>Оптимізує заголовки й форматує текст під правила кожного сайту.</p></div>
+      <div class="step"><div class="n">03 · ДИСТРИБУЦІЯ</div><h3>Авто-публікація</h3><p>OLX, DOM.RIA, LUN, Realtor.ua — одночасно й без рук.</p></div>
+      <div class="step"><div class="n">04 · КОНТРОЛЬ</div><h3>Повна картина</h3><p>Статус майданчиків, ліди та ефективність каналів.</p></div>
+    </div>
+  </section>
+
+  <!-- 07 VALUE -->
+  <section class="slide">
+    <div class="index">07 <span class="total">/ 11</span></div>
+    <div class="eyebrow">Цінність для sales department</div>
+    <h2 class="title">Це не постинг — це контроль продажів</h2>
+    <div class="stack">
+      <div class="row"><span class="b"></span>Швидший вихід об'єктів на ринок</div>
+      <div class="row"><span class="b"></span>Повна присутність на всіх платформах</div>
+      <div class="row"><span class="b"></span>Менше ручної роботи для команди</div>
+      <div class="row"><span class="b"></span>Стандартизовані, якісні оголошення</div>
+      <div class="row"><span class="b"></span>Контроль ефективності кожного каналу</div>
+    </div>
+  </section>
+
+  <!-- 08 BUSINESS EFFECT -->
+  <section class="slide">
+    <div class="index">08 <span class="total">/ 11</span></div>
+    <div class="eyebrow">Ефект для бізнесу</div>
+    <h2 class="title">Реальні бізнес-результати</h2>
+    <div class="metrics">
+      <div class="metric"><div class="big">−80%</div><div class="lbl">часу на публікацію оголошень</div></div>
+      <div class="metric"><div class="big">+100%</div><div class="lbl">покриття ринку — присутність усюди</div></div>
+      <div class="metric"><div class="big">↑ Ліди</div><div class="lbl">більше вхідних звернень з усіх каналів</div></div>
+      <div class="metric"><div class="big">↑ Угоди</div><div class="lbl">швидше закриття за рахунок швидкості</div></div>
+    </div>
+  </section>
+
+  <!-- 09 WHY SALES -->
+  <section class="slide">
+    <div class="index">09 <span class="total">/ 11</span></div>
+    <div class="eyebrow">Чому це важливо саме для sales</div>
+    <h2 class="title">Швидкість = гроші</h2>
+    <div class="stack">
+      <div class="row"><span class="b"></span>Хто швидше вийшов на ринок — той отримав ліда</div>
+      <div class="row"><span class="b"></span>Хто має більше каналів — той домінує</div>
+      <div class="row"><span class="b"></span>Хто автоматизований — той масштабується</div>
+    </div>
+  </section>
+
+  <!-- 10 POSITIONING -->
+  <section class="slide">
+    <div class="index">10 <span class="total">/ 11</span></div>
+    <div class="eyebrow">Позиціонування</div>
+    <p class="lede" style="margin-top:0;">Ми не CRM і не просто інструмент постингу.</p>
+    <div class="position-line">Distribution Layer<br>for <span class="accent-text">Sales Teams</span></div>
+    <p class="lede">AI-система для дистрибуції оголошень і контролю продажів.</p>
+  </section>
+
+  <!-- 11 VISION -->
+  <section class="slide">
+    <div class="index">11 <span class="total">/ 11</span></div>
+    <div class="eyebrow">Vision</div>
+    <h2 class="title">Від ручного продажу — до автоматизованої системи</h2>
+    <div class="pillrow">
+      <span class="pill">один об'єкт</span>
+      <span class="pill">один input</span>
+      <span class="pill">десятки платформ</span>
+      <span class="pill">повний контроль</span>
+    </div>
+    <p class="quote">«Відділ продажу не має думати про публікацію — він має думати про <span class="accent-text">закриття угод</span>.»</p>
+  </section>
+
+  <div class="dots" id="dots"></div>
+  <div class="hint">← / → або ПРОБІЛ для навігації</div>
+  <div class="nav">
+    <span class="counter"><b id="cur">01</b> / 11</span>
+    <button id="prev" aria-label="Попередній слайд">‹</button>
+    <button id="next" aria-label="Наступний слайд">›</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var i = 0;
+  var progress = document.getElementById('progress');
+  var cur = document.getElementById('cur');
+  var dotsWrap = document.getElementById('dots');
+
+  for(var d=0; d<total; d++){
+    var dot = document.createElement('i');
+    (function(idx){ dot.addEventListener('click', function(){ go(idx); }); })(d);
+    dotsWrap.appendChild(dot);
+  }
+  var dots = Array.prototype.slice.call(dotsWrap.children);
+
+  function go(n){
+    i = Math.max(0, Math.min(total-1, n));
+    slides.forEach(function(s,k){ s.classList.toggle('active', k===i); });
+    dots.forEach(function(t,k){ t.classList.toggle('on', k===i); });
+    progress.style.width = ((i)/(total-1)*100) + '%';
+    cur.textContent = ('0'+(i+1)).slice(-2);
+  }
+  function next(){ go(i+1); }
+  function prev(){ go(i-1); }
+
+  document.getElementById('next').addEventListener('click', next);
+  document.getElementById('prev').addEventListener('click', prev);
+  document.addEventListener('keydown', function(e){
+    if(e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){ e.preventDefault(); next(); }
+    else if(e.key==='ArrowLeft' || e.key==='PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key==='Home'){ go(0); }
+    else if(e.key==='End'){ go(total-1); }
+  });
+  go(0);
+
+  /* ---- hero distribution network ---- */
+  var canvas = document.getElementById('net');
+  if(!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var W=0, H=0, dpr=Math.min(window.devicePixelRatio||1, 2);
+  var nodes = [];
+  var labels = ['OLX','DOM.RIA','LUN','realtor.ua'];
+
+  function layout(){
+    var r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    var cx = W*0.26, cy = H*0.5;
+    var colX = W*0.80;
+    nodes = [{x:cx,y:cy,c:true}];
+    for(var k=0;k<4;k++){
+      nodes.push({ x: colX, y: (H*0.16) + k*(H*0.68/3), label: labels[k] });
+    }
+  }
+  layout();
+  window.addEventListener('resize', layout);
+
+  var t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    var c = nodes[0];
+    // links + packets
+    for(var k=1;k<nodes.length;k++){
+      var n = nodes[k];
+      ctx.strokeStyle = 'rgba(44,52,112,0.9)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(n.x,n.y); ctx.stroke();
+      if(!reduce){
+        var phase = (t*0.012 + k*0.22) % 1;
+        var px = c.x + (n.x-c.x)*phase;
+        var py = c.y + (n.y-c.y)*phase;
+        var grd = ctx.createRadialGradient(px,py,0,px,py,7);
+        grd.addColorStop(0,'rgba(255,90,60,0.95)');
+        grd.addColorStop(1,'rgba(255,90,60,0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath(); ctx.arc(px,py,7,0,6.2832); ctx.fill();
+      }
+      // endpoint node
+      ctx.fillStyle = '#161B3D'; ctx.strokeStyle='rgba(61,224,208,0.55)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(n.x,n.y,7,0,6.2832); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#9298C4';
+      ctx.font = '600 13px Consolas, monospace';
+      ctx.textBaseline='middle';
+      ctx.fillText(n.label, n.x+15, n.y);
+    }
+    // center node pulse
+    var pulse = reduce ? 0 : (Math.sin(t*0.05)+1)/2;
+    ctx.fillStyle = 'rgba(255,90,60,'+(0.12+pulse*0.10)+')';
+    ctx.beginPath(); ctx.arc(c.x,c.y,22+pulse*7,0,6.2832); ctx.fill();
+    ctx.fillStyle = '#FF5A3C';
+    ctx.beginPath(); ctx.arc(c.x,c.y,12,0,6.2832); ctx.fill();
+    ctx.fillStyle = '#EEF0FA';
+    ctx.font = '700 12px Consolas, monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('1', c.x, c.y);
+    ctx.textAlign='left';
+    ctx.fillStyle='#9298C4'; ctx.font='600 12px Consolas, monospace';
+    ctx.fillText('ОДИН ОБ’ЄКТ', c.x-34, c.y+34);
+
+    t++;
+    if(!reduce) requestAnimationFrame(draw);
+  }
+  if(reduce){ draw(); } else { requestAnimationFrame(draw); }
+})();
+</script>
